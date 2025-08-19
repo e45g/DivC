@@ -26,10 +26,12 @@ token_t *lexer_parse(char *src) {
     trie_insert(&keywords, "u16", U16);
     trie_insert(&keywords, "u32", U32);
     trie_insert(&keywords, "u64", U64);
+    trie_insert(&keywords, "unsigned", UNSIGNED);
+    trie_insert(&keywords, "short", SHORT);
+    trie_insert(&keywords, "long", LONG);
 
-    token_t *list = malloc(sizeof(token_t));
+    token_t *list = calloc(1, sizeof(token_t));
     token_t *head = list;
-    memset(list, '\0', sizeof(token_t));
 
     size_t len = strlen(src);
     for(size_t i = 0; i < len; i++) {
@@ -95,6 +97,18 @@ token_t *lexer_parse(char *src) {
                 }
                 break;
             }
+            case '=': {
+                next = src[i + 1];
+                if(next == '=') {
+                    lexer_push(&list, EQUAL, "==");
+                    i++;
+                }
+                else {
+                    lexer_push(&list, ASSIGN, "=");
+                }
+                break;
+            }
+
             case '!': {
                 next = src[i + 1];
                 if(next == '=') {

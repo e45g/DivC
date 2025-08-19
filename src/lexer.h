@@ -41,6 +41,9 @@ typedef enum token_type {
 
     // keywords
     PRINT,
+    UNSIGNED,
+    LONG,
+    SHORT,
     I8,
     I16,
     I32,

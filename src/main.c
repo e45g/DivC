@@ -1,15 +1,34 @@
-#include <stdio.h>
-#include <string.h>
 #include "lexer.h"
+#include "parser.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-int main(void) {
-    char SOURCE[] = "int x = 1 + 2;";
-    
-    token_t *token = lexer_parse(SOURCE);
-    token_t *current = token->next;
-    for(; current->next != NULL; current=current->next) {
-        printf("%s\n", current->value);
+void print_ast(struct statement_list *statements);
+
+int main(int argc, char *argv[]) {
+    if(argc < 2) {
+        printf("Usage: %s <file>\n", argv[0]);
     }
+
+    FILE *f = fopen(argv[1], "r");
+    if(!f) {
+        printf("Failed to open specified file.\n");
+        return 1;
+    }
+
+    size_t size = 0;
+    fseek(f, 0, SEEK_END);
+    size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char *buffer = (char *) malloc(size+1);
+    fread(buffer, size, 1, f);
+    buffer[size] = '\0';
+
+
+    token_t *token = lexer_parse(buffer);
+    struct statement_list *statement = ast_parse(token);
+    print_ast(statement);
 
     return 0;
 }
