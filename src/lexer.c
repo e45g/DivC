@@ -16,7 +16,7 @@ void lexer_push(token_t **n, token_type_t type, char *val) {
 
 token_t *lexer_parse(char *src) {
     struct trie keywords = {0};
-    trie_insert(&keywords, "print", PRINT);
+    trie_insert(&keywords, "void", VOID);
     trie_insert(&keywords, "i8", I8);
     trie_insert(&keywords, "i16", I16);
     trie_insert(&keywords, "i32", I32);
@@ -29,6 +29,7 @@ token_t *lexer_parse(char *src) {
     trie_insert(&keywords, "unsigned", UNSIGNED);
     trie_insert(&keywords, "short", SHORT);
     trie_insert(&keywords, "long", LONG);
+    trie_insert(&keywords, "return", RETURN);
 
     token_t *list = calloc(1, sizeof(token_t));
     token_t *head = list;
@@ -120,8 +121,49 @@ token_t *lexer_parse(char *src) {
                 }
                 break;
             }
+
+            case '(': {
+                lexer_push(&list, LEFT_PAREN, "(");
+                break;
+            }
+
+            case '{': {
+                lexer_push(&list, LEFT_CURLY, "{");
+                break;
+            }
+
+            case '[': {
+                lexer_push(&list, LEFT_SQUARE, "[");
+                break;
+            }
+
+            case ')': {
+                lexer_push(&list, RIGHT_PAREN, ")");
+                break;
+            }
+
+            case '}': {
+                lexer_push(&list, RIGHT_CURLY, "}");
+                break;
+            }
+
+            case ']': {
+                lexer_push(&list, RIGHT_SQUARE, "]");
+                break;
+            }
+            
             case ';': {
                 lexer_push(&list, SEMICOLON, ";");
+                break;
+            }
+
+            case ',': {
+                lexer_push(&list, COMMA, ",");
+                break;
+            }
+
+            case '.': {
+                lexer_push(&list, DOT, ".");
                 break;
             }
 

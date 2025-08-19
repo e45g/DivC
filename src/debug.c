@@ -30,7 +30,27 @@ const char* expr_type_to_string(expr_type_t type) {
         case F64: return "float64";
         case VOID_T: return "void";
         case STRUC: return "struct";
-        default: return "unknown";
+        default: {
+            if(type & TYPE_POINTER) {
+                type &= ~TYPE_POINTER;
+                switch(type) { 
+                    case INT8: return "int8*";
+                    case INT16: return "int16*";
+                    case INT32: return "int32*";
+                    case INT64: return "int64*";
+                    case UINT8: return "uint8*";
+                    case UINT16: return "uint16*";
+                    case UINT32: return "uint32*";
+                    case UINT64: return "uint64*";
+                    case F32: return "float32*";
+                    case F64: return "float64*";
+                    case VOID_T: return "void*";
+                    case STRUC: return "struct*";
+                    default: return "unknown1*";
+                }
+            }
+            return "unknown2";
+        }
     }
 }
 
@@ -53,11 +73,11 @@ void print_ast_node(ast_node_t *node, int depth) {
             printf("BINARY_OP: %s\n", token_type_to_string(node->expr.binary_op.op));
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("├─ LEFT:\n");
+            printf("+- LEFT:\n");
             print_ast_node(node->expr.binary_op.left, depth + 2);
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("└─ RIGHT:\n");
+            printf("+- RIGHT:\n");
             print_ast_node(node->expr.binary_op.right, depth + 2);
             break;
             
@@ -68,7 +88,7 @@ void print_ast_node(ast_node_t *node, int depth) {
         case AST_UNARY_OP:
             printf("UNARY_OP: %s\n", token_type_to_string(node->expr.unary_op.op));
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("└─ OPERAND:\n");
+            printf("+- OPERAND:\n");
             print_ast_node(node->expr.unary_op.node, depth + 2);
             break;
             
@@ -82,7 +102,6 @@ void print_ast_node(ast_node_t *node, int depth) {
     }
 }
 
-// Function to print AST statements
 void print_ast_statement(ast_statement_t *stmt, int depth) {
     if (stmt == NULL) {
         for (int i = 0; i < depth; i++) printf("  ");
@@ -93,17 +112,17 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
     for (int i = 0; i < depth; i++) printf("  ");
 
     switch(stmt->type) {
-        case AST_DECLARATION:
+        case AST_VAR_DECLARATION:
             printf("DECLARATION:\n");
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("├─ TYPE: %s\n", expr_type_to_string(stmt->statement.declaration.t));
+            printf("+- TYPE: %s\n", expr_type_to_string(stmt->statement.declaration.t));
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("├─ IDENTIFIER: %s\n", stmt->statement.declaration.identifier ? stmt->statement.declaration.identifier : "(null)");
+            printf("+- IDENTIFIER: %s\n", stmt->statement.declaration.identifier ? stmt->statement.declaration.identifier : "(null)");
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("└─ INITIALIZER:\n");
+            printf("+- INITIALIZER:\n");
             if (stmt->statement.declaration.initializer != NULL) {
                 print_ast_statement(stmt->statement.declaration.initializer, depth + 2);
             } else {
@@ -112,15 +131,23 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
             }
             break;
             
-        case AST_ASSIGNMENT:
+        case AST_VAR_ASSIGNMENT:
             printf("ASSIGNMENT:\n");
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("├─ IDENTIFIER: %s\n", stmt->statement.assignment.identifier ? stmt->statement.assignment.identifier : "(null)");
+            printf("+- IDENTIFIER: %s\n", stmt->statement.assignment.identifier ? stmt->statement.assignment.identifier : "(null)");
             
             for (int i = 0; i < depth + 1; i++) printf("  ");
-            printf("└─ VALUE:\n");
+            printf("+- VALUE:\n");
             print_ast_node(stmt->statement.assignment.value, depth + 2);
+            break;
+
+        case AST_RETURN_STMT:
+            printf("RETURN:\n");
+            
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- VALUE:\n");
+            print_ast_node(stmt->statement.ret.value, depth + 2);
             break;
             
         default:
@@ -129,7 +156,6 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
     }
 }
 
-// Function to print the entire AST
 void print_ast(struct statement_list *statements) {
     printf("=== ABSTRACT SYNTAX TREE ===\n");
     

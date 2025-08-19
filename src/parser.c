@@ -43,7 +43,6 @@ void next(token_t **token) {
     }
 }
 
-
 ast_node_t *factor(token_t **token) {
     switch((*token)->type) {
         case NUMBER: {
@@ -51,6 +50,24 @@ ast_node_t *factor(token_t **token) {
             node->type = AST_NUMBER;
             node->expr.integer = atoi((*token)->value);
             next(token);
+            return node;
+        }
+        case IDENTIFIER: {
+            ast_node_t *node = malloc(sizeof(ast_node_t));
+            node->type = AST_IDENTIFIER;
+            node->expr.identifier = (*token)->value;
+            next(token);
+            return node;
+        }
+        case LEFT_PAREN: {
+            next(token);
+            ast_node_t *node = expression(token);
+
+            if (!expect_move(token, RIGHT_PAREN)) {
+                printf("Error: expected ')'\n");
+                return NULL;
+            }
+
             return node;
         }
         default: {
@@ -62,6 +79,7 @@ ast_node_t *factor(token_t **token) {
 
 ast_node_t *term(token_t **token) {
     ast_node_t *f = factor(token);
+
     while(expect(token, STAR) || expect(token, SLASH)) {
         ast_node_t *node = malloc(sizeof(ast_node_t));
         node->type=AST_BINARY_OP;
@@ -95,16 +113,16 @@ ast_node_t *expression(token_t **token) {
 }
 
 
-ast_statement_t *ast_variable(token_t **token, expr_type_t type, char *name) {
+ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *name) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
 
     if(expect_move(token, ASSIGN) == 1) {
-        var->type = AST_DECLARATION;
+        var->type = AST_VAR_DECLARATION;
         var->statement.declaration.identifier = name;
         var->statement.declaration.t = type;
 
         ast_statement_t *assignment = malloc(sizeof(ast_statement_t));
-        assignment->type = AST_ASSIGNMENT;
+        assignment->type = AST_VAR_ASSIGNMENT;
         assignment->statement.assignment.identifier = name;
         assignment->statement.assignment.value = expression(token);
 
@@ -118,6 +136,52 @@ ast_statement_t *ast_variable(token_t **token, expr_type_t type, char *name) {
     }
 
     return var;
+}
+
+ast_statement_t *ast_var_assignment(token_t **token, char *name) {
+    ast_statement_t *var = malloc(sizeof(ast_statement_t));
+
+    if(expect_move(token, ASSIGN) == 1) {
+        var->type = AST_VAR_ASSIGNMENT;
+        var->statement.assignment.identifier = name;
+        var->statement.assignment.value = expression(token);
+    }
+
+    if(!expect(token, SEMICOLON)) {
+        printf("Missing semicolon;\n");
+    } else {
+        next(token);
+    }
+
+    return var;
+}
+
+ast_statement_t *ast_return(token_t **token) {
+    ast_statement_t *node = malloc(sizeof(ast_statement_t));
+
+    node->type = AST_RETURN_STMT;
+    node->statement.ret.value = expression(token);
+
+    if(!expect(token, SEMICOLON)) {
+
+        printf("Missing semicolon;\n");
+    } else {
+        next(token);
+    }
+
+    return node;
+}
+
+ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name) {
+    ast_statement_t *func = malloc(sizeof(ast_statement_t));
+
+    func->type = AST_FUNC_DECLARATION;
+    func->statement.function.type = type;
+    func->statement.function.identifier = name;
+
+    // TODO: finish
+
+    return func;
 }
 
 ast_statement_t *ast_statement(token_t **token) {
@@ -134,17 +198,34 @@ ast_statement_t *ast_statement(token_t **token) {
         case LONG:
         case UNSIGNED: {
             expr_type_t type = ast_type(token);
-
             char *name = (*token)->value;
+
             if (expect_move(token, IDENTIFIER) == 1) {
                 if (expect(token, ASSIGN) == 1) {
-                    return ast_variable(token, type, name);
+                    return ast_var_declaration(token, type, name);
+                }
+
+                else if (expect(token, LEFT_PAREN) == 1) {
+                    return ast_function(token, type, name);
                 }
             }
             break;
         }
+        case IDENTIFIER: {
+            char *name = (*token)->value; 
+            next(token);
+            if(expect(token, ASSIGN) == 1) {
+                return ast_var_assignment(token, name);
+            }
+            break;
+        }
+
+        case RETURN: {
+            next(token);
+            return ast_return(token);
+        }
         default: {
-            printf("Unexpected token type: %d\n", (*token)->type);
+            printf("Unexpected token type: %d, value: %s\n", (*token)->type, (*token)->value);
             next(token);
             return NULL;
         }
@@ -152,36 +233,91 @@ ast_statement_t *ast_statement(token_t **token) {
     return NULL;
 }
 
-
 expr_type_t ast_type(token_t **token) {
     if (*token == NULL) return UNKNOWN_TYPE;
+
+    expr_type_t res;
 
     switch((*token)->type) {
         case LONG:
             next(token);
-            if (expect_move(token, I32)) return INT64;
+            if (expect_move(token, I32)) res = INT64;
             break;
         case SHORT:
             next(token);
-            if (expect_move(token, I32)) return INT16;
+            if (expect_move(token, I32)) res = INT16;
             break;
         case UNSIGNED: {
             next(token);
-            expr_type_t t = ast_type(token); // recursively get the base type
+            expr_type_t t = ast_type(token);
             switch(t) {
-                case INT8: return UINT8;
-                case INT16: return UINT16;
-                case INT32: return UINT32;
-                case INT64: return UINT64;
-                default: printf("Unexpected after unsigned\n"); return UNKNOWN_TYPE;
+                case INT8:
+                    res = UINT8;
+                    break;
+                case INT16:
+                    res = UINT16;
+                    break;
+                case INT32:
+                    res = UINT32;
+                    break;
+                case INT64:
+                    res = UINT64;
+                    break;
+                default: 
+                    printf("Unexpected after unsigned\n"); 
+                    res =  UNKNOWN_TYPE;
+                    break;
             }
+            break;
         }
-        case I8: next(token); return INT8;
-        case I16: next(token); return INT16;
-        case I32: next(token); return INT32;
-        case I64: next(token); return INT64;
+        case I8: {
+            next(token);
+            res = INT8;
+            break;
+        }
+        case I16: {
+            next(token);
+            res = INT16;
+            break;
+        }
+        case I32: {
+            next(token);
+            res = INT32;
+            break;
+        }
+        case I64: {
+            next(token);
+            res = INT64;
+            break;
+        }
+
+        case U8: {
+            next(token);
+            res = UINT8;
+            break;
+        }
+        case U16: {
+            next(token);
+            res = UINT16;
+            break;
+        }
+        case U32: {
+            next(token);
+            res = UINT32;
+            break;
+        }
+        case U64: {
+            next(token);
+            res = UINT64;
+            break;
+        }
         default: printf("Unknown type\n"); return UNKNOWN_TYPE;
     }
-    return UNKNOWN_TYPE;
+
+    if(expect_move(token, STAR)) {
+        res |= TYPE_POINTER;
+    }
+
+    return res;
 }
 

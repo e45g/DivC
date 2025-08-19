@@ -40,10 +40,7 @@ typedef enum token_type {
     XOR_EQ,
 
     // keywords
-    PRINT,
-    UNSIGNED,
-    LONG,
-    SHORT,
+    VOID,
     I8,
     I16,
     I32,
@@ -52,10 +49,22 @@ typedef enum token_type {
     U16,
     U32,
     U64,
+    UNSIGNED,
+    LONG,
+    SHORT,
+    RETURN,
 
     // special
+    LEFT_PAREN,
+    LEFT_CURLY,
+    LEFT_SQUARE,
+    RIGHT_PAREN,
+    RIGHT_CURLY,
+    RIGHT_SQUARE,
     SEMICOLON,
     ARROW,
+    COMMA,
+    DOT,
 
     TOKEN_EOF,
     TOKEN_UNKNOWN
