@@ -32,8 +32,8 @@ const char* expr_type_to_string(expr_type_t type) {
         case STRUC: return "struct";
         default: {
             if(type & TYPE_POINTER) {
-                type &= ~TYPE_POINTER;
-                switch(type) { 
+                type = type & ~TYPE_POINTER;
+                switch(type) {
                     case INT8: return "int8*";
                     case INT16: return "int16*";
                     case INT32: return "int32*";
@@ -68,34 +68,34 @@ void print_ast_node(ast_node_t *node, int depth) {
         case AST_NUMBER:
             printf("NUMBER: %llu\n", (unsigned long long)node->expr.integer);
             break;
-            
+
         case AST_BINARY_OP:
             printf("BINARY_OP: %s\n", token_type_to_string(node->expr.binary_op.op));
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- LEFT:\n");
             print_ast_node(node->expr.binary_op.left, depth + 2);
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- RIGHT:\n");
             print_ast_node(node->expr.binary_op.right, depth + 2);
             break;
-            
+
         case AST_IDENTIFIER:
             printf("IDENTIFIER: %s\n", node->expr.identifier ? node->expr.identifier : "(null)");
             break;
-            
+
         case AST_UNARY_OP:
             printf("UNARY_OP: %s\n", token_type_to_string(node->expr.unary_op.op));
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- OPERAND:\n");
             print_ast_node(node->expr.unary_op.node, depth + 2);
             break;
-            
+
         case AST_STRING:
             printf("STRING: \"%s\"\n", node->expr.identifier ? node->expr.identifier : "(null)");
             break;
-            
+
         default:
             printf("UNKNOWN_NODE_TYPE: %d\n", node->type);
             break;
@@ -114,13 +114,13 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
     switch(stmt->type) {
         case AST_VAR_DECLARATION:
             printf("DECLARATION:\n");
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- TYPE: %s\n", expr_type_to_string(stmt->statement.declaration.t));
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- IDENTIFIER: %s\n", stmt->statement.declaration.identifier ? stmt->statement.declaration.identifier : "(null)");
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- INITIALIZER:\n");
             if (stmt->statement.declaration.initializer != NULL) {
@@ -130,13 +130,13 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
                 printf("(no initializer)\n");
             }
             break;
-            
+
         case AST_VAR_ASSIGNMENT:
             printf("ASSIGNMENT:\n");
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- IDENTIFIER: %s\n", stmt->statement.assignment.identifier ? stmt->statement.assignment.identifier : "(null)");
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- VALUE:\n");
             print_ast_node(stmt->statement.assignment.value, depth + 2);
@@ -144,7 +144,7 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
 
         case AST_RETURN_STMT:
             printf("RETURN:\n");
-            
+
             for (int i = 0; i < depth + 1; i++) printf("  ");
             printf("+- VALUE:\n");
             print_ast_node(stmt->statement.ret.value, depth + 2);
@@ -181,7 +181,7 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
                 }
             }
             break;
-            
+
         default:
             printf("UNKNOWN_STATEMENT_TYPE: %d\n", stmt->type);
             break;
@@ -190,21 +190,21 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
 
 void print_ast(struct statement_list *statements) {
     printf("=== ABSTRACT SYNTAX TREE ===\n");
-    
+
     if (statements == NULL) {
         printf("(empty AST)\n");
         printf("=== END OF AST ===\n");
         return;
     }
-    
+
     int stmt_count = 0;
     struct statement_list *current = statements;
-    
+
     while (current != NULL && current->statement != NULL) {
         printf("\nStatement %d:\n", stmt_count++);
         print_ast_statement(current->statement, 1);
         current = current->next;
     }
-    
+
     printf("\n=== END OF AST ===\n");
 }

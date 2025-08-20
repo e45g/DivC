@@ -30,11 +30,11 @@ int expect(token_t **token, token_type_t type) {
 }
 
 int expect_move(token_t **token, token_type_t type) {
-    if (expect(token, type) == 1) {
-        *token = (*token)->next; 
+    if (expect(token, type)) {
+        *token = (*token)->next;
         return 1;
     }
-    return -1;
+    return 0;
 }
 
 void next(token_t **token) {
@@ -116,7 +116,7 @@ ast_node_t *expression(token_t **token) {
 ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *name) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
 
-    if(expect_move(token, ASSIGN) == 1) {
+    if(expect_move(token, ASSIGN)) {
         var->type = AST_VAR_DECLARATION;
         var->statement.declaration.identifier = name;
         var->statement.declaration.t = type;
@@ -141,7 +141,7 @@ ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *na
 ast_statement_t *ast_var_assignment(token_t **token, char *name) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
 
-    if(expect_move(token, ASSIGN) == 1) {
+    if(expect_move(token, ASSIGN)) {
         var->type = AST_VAR_ASSIGNMENT;
         var->statement.assignment.identifier = name;
         var->statement.assignment.value = expression(token);
@@ -173,30 +173,29 @@ ast_statement_t *ast_return(token_t **token) {
 }
 
 struct block_member *ast_block(token_t **token) {
-    if(expect_move(token, LEFT_CURLY) < 0) {
+    if(!expect_move(token, LEFT_CURLY)) {
         printf("Expected {, found: %s\n", (*token)->value);
         return NULL;
     }
 
-    if(expect_move(token, RIGHT_CURLY) == 1){
+    if(expect_move(token, RIGHT_CURLY)){
         return NULL;
-    } 
+    }
 
-    struct block_member *block = malloc(sizeof(struct block_member));     
+    struct block_member *block = malloc(sizeof(struct block_member));
     struct block_member *head = block;
     head->stack_size = 0;
 
-    while(expect_move(token, RIGHT_CURLY) < 0) {
+    while(!expect_move(token, RIGHT_CURLY)) {
         ast_statement_t *statement = ast_statement(token);
 
         if(statement->type == AST_VAR_DECLARATION) head->stack_size += get_type_size(statement->statement.declaration.t);
 
         block->value = statement;
-        block->next = malloc(sizeof(struct block_member));     
+        block->next = malloc(sizeof(struct block_member));
         block = block->next;
         block->value = 0;
     }
-    next(token);
     return head;
 }
 
@@ -206,8 +205,41 @@ ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name) {
     func->type = AST_FUNC_DECLARATION;
     func->statement.function.type = type;
     func->statement.function.identifier = name;
-    next(token);
-    next(token);
+
+    expect_move(token, LEFT_PAREN);
+
+    size_t arg_c = 0;
+    struct arg *args = NULL;
+    if(expect_move(token, RIGHT_PAREN)) {
+        arg_c = 0;
+    }
+    else if (expect(token, VOID) && (*token)->next && (*token)->next->type == RIGHT_PAREN) {
+        next(token);
+        expect_move(token, RIGHT_PAREN);
+        arg_c = 0;
+        args = NULL;
+    }
+    else {
+        do {
+            expr_type_t type = ast_type(token);
+            char *id = NULL;
+            if(expect(token, IDENTIFIER)) {
+                id = (*token)->value;
+                next(token);
+            }
+            args = realloc(args, sizeof(struct arg) * (arg_c+1));
+            args[arg_c].identifier = id;
+            args[arg_c].type = type;
+            arg_c++;
+        } while(expect_move(token, COMMA));
+
+        if(!expect_move(token, RIGHT_PAREN)) {
+            printf("Error: expected ')', found: %s\n", (*token)->value);
+        }
+    }
+    func->statement.function.args = args;
+    func->statement.function.arg_count = arg_c;
+
     func->statement.function.block = ast_block(token);
 
     return func;
@@ -229,21 +261,21 @@ ast_statement_t *ast_statement(token_t **token) {
             expr_type_t type = ast_type(token);
             char *name = (*token)->value;
 
-            if (expect_move(token, IDENTIFIER) == 1) {
-                if (expect(token, ASSIGN) == 1) {
+            if (expect_move(token, IDENTIFIER)) {
+                if (expect(token, ASSIGN)) {
                     return ast_var_declaration(token, type, name);
                 }
 
-                else if (expect(token, LEFT_PAREN) == 1) {
+                else if (expect(token, LEFT_PAREN)) {
                     return ast_function(token, type, name);
                 }
             }
             break;
         }
         case IDENTIFIER: {
-            char *name = (*token)->value; 
+            char *name = (*token)->value;
             next(token);
-            if(expect(token, ASSIGN) == 1) {
+            if(expect(token, ASSIGN)) {
                 return ast_var_assignment(token, name);
             }
             break;
@@ -265,7 +297,7 @@ ast_statement_t *ast_statement(token_t **token) {
 expr_type_t ast_type(token_t **token) {
     if (*token == NULL) return UNKNOWN_TYPE;
 
-    expr_type_t res;
+    expr_type_t res = 0;
 
     switch((*token)->type) {
         case LONG:
@@ -292,8 +324,8 @@ expr_type_t ast_type(token_t **token) {
                 case INT64:
                     res = UINT64;
                     break;
-                default: 
-                    printf("Unexpected after unsigned\n"); 
+                default:
+                    printf("Unexpected after unsigned\n");
                     res =  UNKNOWN_TYPE;
                     break;
             }
@@ -340,6 +372,12 @@ expr_type_t ast_type(token_t **token) {
             res = UINT64;
             break;
         }
+
+        case VOID: {
+            next(token);
+            res = VOID_T;
+            break;
+        }
         default: printf("Unknown type\n"); return UNKNOWN_TYPE;
     }
 
@@ -354,18 +392,18 @@ int get_type_size(expr_type_t type) {
     // TODO: check for pointer
 
     switch(type) {
-        case INT8: return 1;        
-        case INT16: return 2;        
-        case INT32: return 4;        
-        case INT64: return 8;        
-        case UINT8: return 1;        
-        case UINT16: return 2;        
-        case UINT32: return 4;        
-        case UINT64: return 8;        
+        case INT8: return 1;
+        case INT16: return 2;
+        case INT32: return 4;
+        case INT64: return 8;
+        case UINT8: return 1;
+        case UINT16: return 2;
+        case UINT32: return 4;
+        case UINT64: return 8;
         case F32: return 4;
         case F64: return 8;
         case VOID_T: return 0;
         case STRUC: return 0;
         default: return -1;
     }
-} 
+}
