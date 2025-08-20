@@ -149,6 +149,38 @@ void print_ast_statement(ast_statement_t *stmt, int depth) {
             printf("+- VALUE:\n");
             print_ast_node(stmt->statement.ret.value, depth + 2);
             break;
+
+        case AST_FUNC_DECLARATION:
+            printf("FUNCTION DECLARATION:\n");
+
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- RETURN TYPE: %s\n", expr_type_to_string(stmt->statement.function.type));
+
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- IDENTIFIER: %s\n", stmt->statement.function.identifier ? stmt->statement.function.identifier : "(null)");
+
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- ARGUMENTS (%zu):\n", stmt->statement.function.arg_count);
+            for (size_t i = 0; i < stmt->statement.function.arg_count; i++) {
+                for (int j = 0; j < depth + 2; j++) printf("  ");
+                printf("%s %s\n",
+                       expr_type_to_string(stmt->statement.function.args[i].type),
+                       stmt->statement.function.args[i].identifier ? stmt->statement.function.args[i].identifier : "(null)");
+            }
+
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- BODY:\n");
+            {
+                struct block_member *bm = stmt->statement.function.block;
+                int idx = 0;
+                while (bm && bm->value) {
+                    for (int j = 0; j < depth + 2; j++) printf("  ");
+                    printf("Statement %d in block:\n", idx++);
+                    print_ast_statement(bm->value, depth + 3);
+                    bm = bm->next;
+                }
+            }
+            break;
             
         default:
             printf("UNKNOWN_STATEMENT_TYPE: %d\n", stmt->type);

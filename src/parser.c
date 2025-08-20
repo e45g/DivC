@@ -172,14 +172,43 @@ ast_statement_t *ast_return(token_t **token) {
     return node;
 }
 
+struct block_member *ast_block(token_t **token) {
+    if(expect_move(token, LEFT_CURLY) < 0) {
+        printf("Expected {, found: %s\n", (*token)->value);
+        return NULL;
+    }
+
+    if(expect_move(token, RIGHT_CURLY) == 1){
+        return NULL;
+    } 
+
+    struct block_member *block = malloc(sizeof(struct block_member));     
+    struct block_member *head = block;
+    head->stack_size = 0;
+
+    while(expect_move(token, RIGHT_CURLY) < 0) {
+        ast_statement_t *statement = ast_statement(token);
+
+        if(statement->type == AST_VAR_DECLARATION) head->stack_size += get_type_size(statement->statement.declaration.t);
+
+        block->value = statement;
+        block->next = malloc(sizeof(struct block_member));     
+        block = block->next;
+        block->value = 0;
+    }
+    next(token);
+    return head;
+}
+
 ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name) {
     ast_statement_t *func = malloc(sizeof(ast_statement_t));
 
     func->type = AST_FUNC_DECLARATION;
     func->statement.function.type = type;
     func->statement.function.identifier = name;
-
-    // TODO: finish
+    next(token);
+    next(token);
+    func->statement.function.block = ast_block(token);
 
     return func;
 }
@@ -321,3 +350,22 @@ expr_type_t ast_type(token_t **token) {
     return res;
 }
 
+int get_type_size(expr_type_t type) {
+    // TODO: check for pointer
+
+    switch(type) {
+        case INT8: return 1;        
+        case INT16: return 2;        
+        case INT32: return 4;        
+        case INT64: return 8;        
+        case UINT8: return 1;        
+        case UINT16: return 2;        
+        case UINT32: return 4;        
+        case UINT64: return 8;        
+        case F32: return 4;
+        case F64: return 8;
+        case VOID_T: return 0;
+        case STRUC: return 0;
+        default: return -1;
+    }
+} 

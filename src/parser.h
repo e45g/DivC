@@ -114,5 +114,6 @@ struct statement_list *ast_parse(token_t *list);
 ast_statement_t *ast_statement(token_t **token);
 expr_type_t ast_type(token_t **token);
 ast_node_t *expression(token_t **token);
+int get_type_size(expr_type_t type);
 
 #endif
