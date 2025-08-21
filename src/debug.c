@@ -208,3 +208,12 @@ void print_ast(struct statement_list *statements) {
 
     printf("\n=== END OF AST ===\n");
 }
+
+void print_tokens(token_t *token) {
+    token_t *current = token;
+    while(current != NULL) {
+        printf("%d(%s) ", current->type, current->value);
+        current = current->next;
+    }
+    printf("\n");
+}

@@ -3,7 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include "lexer.h"
+#include "trie.h"
 
 #define TYPE_POINTER 0x100
 
@@ -52,6 +54,7 @@ struct block_member;
 
 typedef struct ast_node {
     enum ast_expr_type type;
+    pos_t pos;
     union ast_expr {
         uint64_t integer;
         char *identifier;
@@ -71,6 +74,7 @@ typedef struct ast_node {
 
 typedef struct ast_statement {
     enum ast_stmt_type type;
+    pos_t pos;
     union {
         struct {
             char *identifier;
@@ -111,7 +115,7 @@ struct block_member {
 
 
 struct statement_list *ast_parse(token_t *list);
-ast_statement_t *ast_statement(token_t **token);
+ast_statement_t *ast_statement(token_t **token, struct trie *functions);
 expr_type_t ast_type(token_t **token);
 ast_node_t *expression(token_t **token);
 int get_type_size(expr_type_t type);

@@ -10,7 +10,7 @@ struct trie {
     token_type_t type;
 };
 
-void trie_insert(struct trie *t, char *s, token_type_t type);
-token_type_t trie_get(struct trie *t, char *s);
+void trie_insert(struct trie *t, char *s, unsigned long type);
+unsigned long trie_get(struct trie *t, char *s);
 
 #endif

@@ -5,11 +5,13 @@
 #include "lexer.h"
 #include "trie.h"
 
-void lexer_push(token_t **n, token_type_t type, char *val) {
+
+void lexer_push(token_t **n, token_type_t type, char *val, pos_t pos) {
     (*n)->next = malloc(sizeof(token_t));
     (*n)->next->type = type;
     (*n)->next->value = val;
     (*n)->next->next = NULL;
+    (*n)->next->pos = pos;
 
     *n = (*n)->next;
 }
@@ -34,78 +36,86 @@ token_t *lexer_parse(char *src) {
     token_t *list = calloc(1, sizeof(token_t));
     token_t *head = list;
 
+    pos_t pos = {1, 0};
+
     size_t len = strlen(src);
     for(size_t i = 0; i < len; i++) {
+        pos.column++;
         char current = src[i];
         char next;
 
+        if(current == '\n'){
+            pos.line++;
+            pos.column = 0;
+            continue;
+        }
         if(isspace(current)) continue;
 
         switch(current) {
             case '+': {
                 next = src[i + 1];
                 if(next == '+') {
-                    lexer_push(&list, PLUS_PLUS, "++");
+                    lexer_push(&list, PLUS_PLUS, "++", pos);
                     i++;
                 }
                 else if(next == '=') {
-                    lexer_push(&list, PLUS_EQ, "+=");
+                    lexer_push(&list, PLUS_EQ, "+=", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, PLUS, "+");
+                    lexer_push(&list, PLUS, "+", pos);
                 }
                 break;
             }
             case '-': {
                 next = src[i + 1];
                 if(next == '-') {
-                    lexer_push(&list, MINUS_MINUS, "--");
+                    lexer_push(&list, MINUS_MINUS, "--", pos);
                     i++;
                 }
                 else if(next == '>') {
-                    lexer_push(&list, ARROW, "->");
+                    lexer_push(&list, ARROW, "->", pos);
                     i++;
                 }
                 else if(next == '=') {
-                    lexer_push(&list, MINUS_EQ, "-=");
+                    lexer_push(&list, MINUS_EQ, "-=", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, MINUS, "-");
+                    lexer_push(&list, MINUS, "-", pos);
                 }
                 break;
             }
             case '*': {
                 next = src[i + 1];
                 if(next == '=') {
-                    lexer_push(&list, STAR_EQ, "*=");
+                    lexer_push(&list, STAR_EQ, "*=", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, STAR, "*");
+                    lexer_push(&list, STAR, "*", pos);
                 }
                 break;
             }
             case '/': {
                 next = src[i + 1];
                 if(next == '=') {
-                    lexer_push(&list, SLASH_EQ, "/=");
+                    lexer_push(&list, SLASH_EQ, "/=", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, SLASH, "/");
+                    lexer_push(&list, SLASH, "/", pos);
                 }
                 break;
             }
             case '=': {
                 next = src[i + 1];
                 if(next == '=') {
-                    lexer_push(&list, EQUAL, "==");
+                    lexer_push(&list, EQUAL, "==", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, ASSIGN, "=");
+                    lexer_push(&list, ASSIGN, "=", pos);
                 }
                 break;
             }
@@ -113,57 +123,57 @@ token_t *lexer_parse(char *src) {
             case '!': {
                 next = src[i + 1];
                 if(next == '=') {
-                    lexer_push(&list, NOT_EQ, "!=");
+                    lexer_push(&list, NOT_EQ, "!=", pos);
                     i++;
                 }
                 else {
-                    lexer_push(&list, NOT, "!");
+                    lexer_push(&list, NOT, "!", pos);
                 }
                 break;
             }
 
             case '(': {
-                lexer_push(&list, LEFT_PAREN, "(");
+                lexer_push(&list, LEFT_PAREN, "(", pos);
                 break;
             }
 
             case '{': {
-                lexer_push(&list, LEFT_CURLY, "{");
+                lexer_push(&list, LEFT_CURLY, "{", pos);
                 break;
             }
 
             case '[': {
-                lexer_push(&list, LEFT_SQUARE, "[");
+                lexer_push(&list, LEFT_SQUARE, "[", pos);
                 break;
             }
 
             case ')': {
-                lexer_push(&list, RIGHT_PAREN, ")");
+                lexer_push(&list, RIGHT_PAREN, ")", pos);
                 break;
             }
 
             case '}': {
-                lexer_push(&list, RIGHT_CURLY, "}");
+                lexer_push(&list, RIGHT_CURLY, "}", pos);
                 break;
             }
 
             case ']': {
-                lexer_push(&list, RIGHT_SQUARE, "]");
+                lexer_push(&list, RIGHT_SQUARE, "]", pos);
                 break;
             }
-            
+
             case ';': {
-                lexer_push(&list, SEMICOLON, ";");
+                lexer_push(&list, SEMICOLON, ";", pos);
                 break;
             }
 
             case ',': {
-                lexer_push(&list, COMMA, ",");
+                lexer_push(&list, COMMA, ",", pos);
                 break;
             }
 
             case '.': {
-                lexer_push(&list, DOT, ".");
+                lexer_push(&list, DOT, ".", pos);
                 break;
             }
 
@@ -177,7 +187,7 @@ token_t *lexer_parse(char *src) {
                     char *val = malloc(length + 1);
                     strncpy(val, src + start, length);
                     val[length] = '\0';
-                    lexer_push(&list, NUMBER, val);
+                    lexer_push(&list, NUMBER, val, pos);
                     i--;
                 }
                 else if(isalpha(current) || current == '_') {
@@ -192,17 +202,19 @@ token_t *lexer_parse(char *src) {
                     i--;
 
                     token_type_t token_type = trie_get(&keywords, val);
-                    lexer_push(&list, token_type, val);
+                    lexer_push(&list, token_type, val, pos);
                 }
                 else {
                     char *val = malloc(2);
                     val[0] = current;
                     val[1] = '\0';
-                    lexer_push(&list, TOKEN_UNKNOWN, val);
+                    lexer_push(&list, TOKEN_UNKNOWN, val, pos);
                 }
             }
         }
     }
+
+    lexer_push(&list, TOKEN_EOF, "token-eof", pos);
 
     return head;
 }

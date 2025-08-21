@@ -6,7 +6,7 @@ TARGET := divc
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $^
+	@$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm $(TARGET)

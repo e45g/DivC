@@ -1,17 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "trie.h"
 #include "parser.h"
 #include "lexer.h"
+
+#define show_error_msg(msg, ...) fprintf(stderr, "Syntax error: " msg "\n", __VA_ARGS__);
+
+void show_error_expected(token_t *token, char *expected) {
+    fprintf(stderr, "Syntax error: Expected '%s', found '%s' on line %d:%d\n", expected, token->value, token->pos.line, token->pos.column);
+}
+
+void show_error_unexpected(token_t *token) {
+    fprintf(stderr, "Syntax error: Unexpected token '%s' on line %d:%d\n", token->value, token->pos.line, token->pos.column);
+}
 
 struct statement_list *ast_parse(token_t *list) {
     token_t *current = list->next;
 
+    struct trie functions = {0};
+
     struct statement_list *statements = malloc(sizeof(struct statement_list));
     struct statement_list *statements_head = statements;
 
-    while(current != NULL) {
-        statements->statement = ast_statement(&current);
+    while(current->type != TOKEN_EOF) {
+        statements->statement = ast_statement(&current, &functions);
 
         if(current != NULL) {
             statements->next = malloc(sizeof(struct statement_list));
@@ -31,7 +44,7 @@ int expect(token_t **token, token_type_t type) {
 
 int expect_move(token_t **token, token_type_t type) {
     if (expect(token, type)) {
-        *token = (*token)->next;
+        if((*token)->next != NULL) *token = (*token)->next;
         return 1;
     }
     return 0;
@@ -64,13 +77,13 @@ ast_node_t *factor(token_t **token) {
             ast_node_t *node = expression(token);
 
             if (!expect_move(token, RIGHT_PAREN)) {
-                printf("Error: expected ')'\n");
+                show_error_expected(*token, ")");
                 return NULL;
             }
-
             return node;
         }
         default: {
+            show_error_unexpected(*token);
             return NULL;
         }
     }
@@ -92,7 +105,6 @@ ast_node_t *term(token_t **token) {
     }
 
     return f;
-
 }
 
 ast_node_t *expression(token_t **token) {
@@ -116,11 +128,11 @@ ast_node_t *expression(token_t **token) {
 ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *name) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
 
-    if(expect_move(token, ASSIGN)) {
-        var->type = AST_VAR_DECLARATION;
-        var->statement.declaration.identifier = name;
-        var->statement.declaration.t = type;
+    var->type = AST_VAR_DECLARATION;
+    var->statement.declaration.identifier = name;
+    var->statement.declaration.t = type;
 
+    if(expect_move(token, ASSIGN)) {
         ast_statement_t *assignment = malloc(sizeof(ast_statement_t));
         assignment->type = AST_VAR_ASSIGNMENT;
         assignment->statement.assignment.identifier = name;
@@ -128,11 +140,15 @@ ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *na
 
         var->statement.declaration.initializer = assignment;
     }
+    else if(expect(token, SEMICOLON)) {
+        var->statement.declaration.initializer = NULL;
+    }
+    else {
+        show_error_unexpected(*token);
+    }
 
-    if(!expect(token, SEMICOLON)) {
-        printf("Missing semicolon;\n");
-    } else {
-        next(token);
+    if(!expect_move(token, SEMICOLON)) {
+        show_error_expected(*token, ";");
     }
 
     return var;
@@ -146,9 +162,12 @@ ast_statement_t *ast_var_assignment(token_t **token, char *name) {
         var->statement.assignment.identifier = name;
         var->statement.assignment.value = expression(token);
     }
+    else {
+        show_error_expected(*token, "=");
+    }
 
     if(!expect(token, SEMICOLON)) {
-        printf("Missing semicolon;\n");
+        show_error_unexpected(*token);
     } else {
         next(token);
     }
@@ -163,8 +182,7 @@ ast_statement_t *ast_return(token_t **token) {
     node->statement.ret.value = expression(token);
 
     if(!expect(token, SEMICOLON)) {
-
-        printf("Missing semicolon;\n");
+        show_error_unexpected(*token);
     } else {
         next(token);
     }
@@ -172,9 +190,9 @@ ast_statement_t *ast_return(token_t **token) {
     return node;
 }
 
-struct block_member *ast_block(token_t **token) {
+struct block_member *ast_block(token_t **token, struct trie *func) {
     if(!expect_move(token, LEFT_CURLY)) {
-        printf("Expected {, found: %s\n", (*token)->value);
+        show_error_expected(*token, "(");
         return NULL;
     }
 
@@ -187,7 +205,7 @@ struct block_member *ast_block(token_t **token) {
     head->stack_size = 0;
 
     while(!expect_move(token, RIGHT_CURLY)) {
-        ast_statement_t *statement = ast_statement(token);
+        ast_statement_t *statement = ast_statement(token, func);
 
         if(statement->type == AST_VAR_DECLARATION) head->stack_size += get_type_size(statement->statement.declaration.t);
 
@@ -199,7 +217,7 @@ struct block_member *ast_block(token_t **token) {
     return head;
 }
 
-ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name) {
+ast_statement_t *ast_function(token_t **token, struct trie *functions, expr_type_t type, char *name) {
     ast_statement_t *func = malloc(sizeof(ast_statement_t));
 
     func->type = AST_FUNC_DECLARATION;
@@ -234,18 +252,28 @@ ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name) {
         } while(expect_move(token, COMMA));
 
         if(!expect_move(token, RIGHT_PAREN)) {
-            printf("Error: expected ')', found: %s\n", (*token)->value);
+            show_error_expected(*token, ")");
         }
     }
     func->statement.function.args = args;
     func->statement.function.arg_count = arg_c;
 
-    func->statement.function.block = ast_block(token);
+
+    if(expect(token, LEFT_CURLY)) {
+        func->statement.function.block = ast_block(token, functions);
+    }
+    else {
+        func->statement.function.block = NULL;
+    }
+
+    expect_move(token, SEMICOLON);
+
+    trie_insert(functions, name, type);
 
     return func;
 }
 
-ast_statement_t *ast_statement(token_t **token) {
+ast_statement_t *ast_statement(token_t **token, struct trie *functions) {
     switch((*token)->type) {
         case I8:
         case I16:
@@ -259,15 +287,21 @@ ast_statement_t *ast_statement(token_t **token) {
         case LONG:
         case UNSIGNED: {
             expr_type_t type = ast_type(token);
+
+            if (!expect(token, IDENTIFIER)) {
+                show_error_expected(*token, "IDENTIFIER");
+                return NULL;
+            }
+
             char *name = (*token)->value;
 
             if (expect_move(token, IDENTIFIER)) {
-                if (expect(token, ASSIGN)) {
+                if (expect(token, ASSIGN) || expect(token, SEMICOLON)) {
                     return ast_var_declaration(token, type, name);
                 }
 
                 else if (expect(token, LEFT_PAREN)) {
-                    return ast_function(token, type, name);
+                    return ast_function(token, functions, type, name);
                 }
             }
             break;
@@ -286,9 +320,11 @@ ast_statement_t *ast_statement(token_t **token) {
             return ast_return(token);
         }
         default: {
-            printf("Unexpected token type: %d, value: %s\n", (*token)->type, (*token)->value);
-            next(token);
-            return NULL;
+            if((*token)->type != TOKEN_EOF) {
+                show_error_unexpected(*token);
+                next(token);
+                return NULL;
+            }
         }
     }
     return NULL;

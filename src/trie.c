@@ -11,7 +11,7 @@ int trie_index(char c) {
     return -1;
 }
 
-void trie_insert(struct trie *t, char *s, token_type_t type) {
+void trie_insert(struct trie *t, char *s, unsigned long type) {
     if(t->children == NULL) {
         t->children = calloc(TRIE_CHILDERN, sizeof(struct trie*));
     }
@@ -32,7 +32,7 @@ void trie_insert(struct trie *t, char *s, token_type_t type) {
     t->type = type;
 }
 
-token_type_t trie_get(struct trie *t, char *s) {
+unsigned long trie_get(struct trie *t, char *s) {
     while(*s != '\0') {
         int idx = trie_index(*s);
         if(idx < 0) return TOKEN_UNKNOWN;

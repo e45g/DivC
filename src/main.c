@@ -1,9 +1,12 @@
+#include "hashmap.h"
 #include "lexer.h"
 #include "parser.h"
+#include "semantic.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 void print_ast(struct statement_list *statements);
+void print_tokens(token_t *token);
 
 int main(int argc, char *argv[]) {
     if(argc < 2) {
@@ -27,8 +30,11 @@ int main(int argc, char *argv[]) {
 
 
     token_t *token = lexer_parse(buffer);
+    // print_tokens(token);
     struct statement_list *statement = ast_parse(token);
+    (void) statement;
     print_ast(statement);
+    // semantic_check(statement);
 
     return 0;
 }

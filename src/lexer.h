@@ -29,7 +29,7 @@ typedef enum token_type {
     LESS,
     LESS_EQ,
     NOT_EQ,
-    
+
     // bit operators
     NOT,
     OR,
@@ -70,9 +70,15 @@ typedef enum token_type {
     TOKEN_UNKNOWN
 } token_type_t;
 
+typedef struct pos {
+    int line;
+    int column;
+} pos_t;
+
 typedef struct token {
     token_type_t type;
     char *value;
+    pos_t pos;
     struct token *next;
 } token_t;
 
