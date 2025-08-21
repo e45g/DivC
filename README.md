@@ -26,8 +26,9 @@ To use the compiler, you need to provide a source file as a command-line argumen
 ```
 
 ### Roadmap
- - [ ] Support functions
+ - [x] Support functions
+ - [ ] Semantic analysis (basic)
+ - [ ] IR
  - [ ] Code generation
  - [ ] Support more features
- - [ ] Semantic analysis
  - [ ] More features :)
