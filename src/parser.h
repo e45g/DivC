@@ -56,7 +56,7 @@ typedef struct ast_node {
     enum ast_expr_type type;
     pos_t pos;
     union ast_expr {
-        uint64_t integer;
+        int64_t integer;
         char *identifier;
 
         struct {
@@ -115,7 +115,7 @@ struct block_member {
 
 
 struct statement_list *ast_parse(token_t *list);
-ast_statement_t *ast_statement(token_t **token, struct trie *functions);
+ast_statement_t *ast_statement(token_t **token);
 expr_type_t ast_type(token_t **token);
 ast_node_t *expression(token_t **token);
 int get_type_size(expr_type_t type);

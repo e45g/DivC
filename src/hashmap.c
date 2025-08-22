@@ -13,9 +13,9 @@ unsigned long hash(char *key) {
     return hash % HASHMAP_TABLE_SIZE;
 }
 
-symbol_t *map_get(map_t *map, char *key) {
+symbol_t *map_get(struct scope *s, char *key) {
     unsigned long idx = hash(key);
-    struct node *n = map->table[idx];
+    struct node *n = s->table[idx];
 
     if(n == NULL) return NULL;
     else {
@@ -29,9 +29,9 @@ symbol_t *map_get(map_t *map, char *key) {
     return NULL;
 }
 
-int map_add(map_t *map, char *key, symbol_t *value) {
+int map_add(struct scope *s, char *key, symbol_t *value) {
     unsigned long idx = hash(key);
-    struct node *n = map->table[idx];
+    struct node *n = s->table[idx];
 
     if(n == NULL) {
         n = malloc(sizeof(struct node));
@@ -39,7 +39,7 @@ int map_add(map_t *map, char *key, symbol_t *value) {
         n->value = value;
         n->next = NULL;
 
-        map->table[idx] = n;
+        s->table[idx] = n;
     }
 
     else {
@@ -56,13 +56,4 @@ int map_add(map_t *map, char *key, symbol_t *value) {
     }
 
     return 0;
-}
-
-
-
-map_t *get_map() {
-    map_t *map = malloc(sizeof(map_t));
-    memset(map, 0, sizeof(map_t));
-
-    return map;
 }

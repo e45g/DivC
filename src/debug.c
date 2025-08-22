@@ -66,7 +66,7 @@ void print_ast_node(ast_node_t *node, int depth) {
 
     switch(node->type) {
         case AST_NUMBER:
-            printf("NUMBER: %llu\n", (unsigned long long)node->expr.integer);
+            printf("NUMBER: %ld\n",node->expr.integer);
             break;
 
         case AST_BINARY_OP:
@@ -215,5 +215,16 @@ void print_tokens(token_t *token) {
         printf("%d(%s) ", current->type, current->value);
         current = current->next;
     }
+    printf("\n");
+}
+
+void print_ast_types(struct statement_list *list) {
+    struct statement_list *current = list;
+    printf("stmts: ");
+    while (current->next != NULL) {
+        printf("%d ", current->statement->type);
+        current = current->next;
+    }
+
     printf("\n");
 }

@@ -55,6 +55,7 @@ typedef enum token_type {
     RETURN,
 
     // special
+    COMMENT,
     LEFT_PAREN,
     LEFT_CURLY,
     LEFT_SQUARE,

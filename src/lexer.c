@@ -36,24 +36,31 @@ token_t *lexer_parse(char *src) {
     token_t *list = calloc(1, sizeof(token_t));
     token_t *head = list;
 
-    pos_t pos = {1, 0};
+    pos_t pos = {1, 1};
 
     size_t len = strlen(src);
-    for(size_t i = 0; i < len; i++) {
-        pos.column++;
+    size_t i = 0;
+    size_t i2 = 0;
+
+    while(i < len) {
         char current = src[i];
-        char next;
+        char next = (i+1) < len ? src[i+1] : '\0';
+        pos.column += i - i2;
+        i2 = i;
 
         if(current == '\n'){
             pos.line++;
             pos.column = 0;
+            i++;
             continue;
         }
-        if(isspace(current)) continue;
+        if(isspace(current)) {
+            i++;
+            continue;
+        }
 
         switch(current) {
             case '+': {
-                next = src[i + 1];
                 if(next == '+') {
                     lexer_push(&list, PLUS_PLUS, "++", pos);
                     i++;
@@ -68,7 +75,6 @@ token_t *lexer_parse(char *src) {
                 break;
             }
             case '-': {
-                next = src[i + 1];
                 if(next == '-') {
                     lexer_push(&list, MINUS_MINUS, "--", pos);
                     i++;
@@ -87,7 +93,6 @@ token_t *lexer_parse(char *src) {
                 break;
             }
             case '*': {
-                next = src[i + 1];
                 if(next == '=') {
                     lexer_push(&list, STAR_EQ, "*=", pos);
                     i++;
@@ -98,10 +103,12 @@ token_t *lexer_parse(char *src) {
                 break;
             }
             case '/': {
-                next = src[i + 1];
                 if(next == '=') {
                     lexer_push(&list, SLASH_EQ, "/=", pos);
                     i++;
+                }
+                else if(next == '/') {
+                    lexer_push(&list, COMMENT, "//", pos);
                 }
                 else {
                     lexer_push(&list, SLASH, "/", pos);
@@ -109,7 +116,6 @@ token_t *lexer_parse(char *src) {
                 break;
             }
             case '=': {
-                next = src[i + 1];
                 if(next == '=') {
                     lexer_push(&list, EQUAL, "==", pos);
                     i++;
@@ -121,7 +127,6 @@ token_t *lexer_parse(char *src) {
             }
 
             case '!': {
-                next = src[i + 1];
                 if(next == '=') {
                     lexer_push(&list, NOT_EQ, "!=", pos);
                     i++;
@@ -212,6 +217,7 @@ token_t *lexer_parse(char *src) {
                 }
             }
         }
+        i++;
     }
 
     lexer_push(&list, TOKEN_EOF, "token-eof", pos);

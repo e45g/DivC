@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "trie.h"
 #include "parser.h"
 #include "lexer.h"
 
@@ -18,20 +17,16 @@ void show_error_unexpected(token_t *token) {
 struct statement_list *ast_parse(token_t *list) {
     token_t *current = list->next;
 
-    struct trie functions = {0};
-
     struct statement_list *statements = malloc(sizeof(struct statement_list));
     struct statement_list *statements_head = statements;
 
     while(current->type != TOKEN_EOF) {
-        statements->statement = ast_statement(&current, &functions);
+        statements->statement = ast_statement(&current);
 
-        if(current != NULL) {
-            statements->next = malloc(sizeof(struct statement_list));
-            statements = statements->next;
-        } else {
-            statements->next = NULL;
-        }
+        statements->next = malloc(sizeof(struct statement_list));
+        statements->next->statement = NULL;
+        statements->next->next = NULL;
+        statements = statements->next;
     }
 
     return statements_head;
@@ -60,6 +55,7 @@ ast_node_t *factor(token_t **token) {
     switch((*token)->type) {
         case NUMBER: {
             ast_node_t *node = malloc(sizeof(ast_node_t));
+            node->pos = (*token)->pos;
             node->type = AST_NUMBER;
             node->expr.integer = atoi((*token)->value);
             next(token);
@@ -67,6 +63,7 @@ ast_node_t *factor(token_t **token) {
         }
         case IDENTIFIER: {
             ast_node_t *node = malloc(sizeof(ast_node_t));
+            node->pos = (*token)->pos;
             node->type = AST_IDENTIFIER;
             node->expr.identifier = (*token)->value;
             next(token);
@@ -75,6 +72,7 @@ ast_node_t *factor(token_t **token) {
         case LEFT_PAREN: {
             next(token);
             ast_node_t *node = expression(token);
+            node->pos = (*token)->pos;
 
             if (!expect_move(token, RIGHT_PAREN)) {
                 show_error_expected(*token, ")");
@@ -92,9 +90,11 @@ ast_node_t *factor(token_t **token) {
 
 ast_node_t *term(token_t **token) {
     ast_node_t *f = factor(token);
+    if(f == NULL) return NULL;
 
     while(expect(token, STAR) || expect(token, SLASH)) {
         ast_node_t *node = malloc(sizeof(ast_node_t));
+        node->pos = (*token)->pos;
         node->type=AST_BINARY_OP;
         node->expr.binary_op.left = f;
         node->expr.binary_op.op = (*token)->type;
@@ -109,9 +109,12 @@ ast_node_t *term(token_t **token) {
 
 ast_node_t *expression(token_t **token) {
     ast_node_t *t = term(token);
+    if(t == NULL) return NULL;
 
     while(expect(token, PLUS) || expect(token, MINUS)) {
         ast_node_t *node = malloc(sizeof(ast_node_t));
+
+        node->pos = (*token)->pos;
         node->type=AST_BINARY_OP;
         node->expr.binary_op.left = t;
         node->expr.binary_op.op = (*token)->type;
@@ -125,9 +128,10 @@ ast_node_t *expression(token_t **token) {
 }
 
 
-ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *name) {
+ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *name, pos_t pos) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
 
+    var->pos = pos;
     var->type = AST_VAR_DECLARATION;
     var->statement.declaration.identifier = name;
     var->statement.declaration.t = type;
@@ -154,8 +158,9 @@ ast_statement_t *ast_var_declaration(token_t **token, expr_type_t type, char *na
     return var;
 }
 
-ast_statement_t *ast_var_assignment(token_t **token, char *name) {
+ast_statement_t *ast_var_assignment(token_t **token, char *name, pos_t pos) {
     ast_statement_t *var = malloc(sizeof(ast_statement_t));
+    var->pos = pos;
 
     if(expect_move(token, ASSIGN)) {
         var->type = AST_VAR_ASSIGNMENT;
@@ -175,9 +180,10 @@ ast_statement_t *ast_var_assignment(token_t **token, char *name) {
     return var;
 }
 
-ast_statement_t *ast_return(token_t **token) {
+ast_statement_t *ast_return(token_t **token, pos_t pos) {
     ast_statement_t *node = malloc(sizeof(ast_statement_t));
 
+    node->pos = pos;
     node->type = AST_RETURN_STMT;
     node->statement.ret.value = expression(token);
 
@@ -190,7 +196,7 @@ ast_statement_t *ast_return(token_t **token) {
     return node;
 }
 
-struct block_member *ast_block(token_t **token, struct trie *func) {
+struct block_member *ast_block(token_t **token) {
     if(!expect_move(token, LEFT_CURLY)) {
         show_error_expected(*token, "(");
         return NULL;
@@ -205,7 +211,8 @@ struct block_member *ast_block(token_t **token, struct trie *func) {
     head->stack_size = 0;
 
     while(!expect_move(token, RIGHT_CURLY)) {
-        ast_statement_t *statement = ast_statement(token, func);
+        ast_statement_t *statement = ast_statement(token);
+        if(statement == NULL) continue;
 
         if(statement->type == AST_VAR_DECLARATION) head->stack_size += get_type_size(statement->statement.declaration.t);
 
@@ -217,9 +224,10 @@ struct block_member *ast_block(token_t **token, struct trie *func) {
     return head;
 }
 
-ast_statement_t *ast_function(token_t **token, struct trie *functions, expr_type_t type, char *name) {
+ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name, pos_t pos) {
     ast_statement_t *func = malloc(sizeof(ast_statement_t));
 
+    func->pos = pos;
     func->type = AST_FUNC_DECLARATION;
     func->statement.function.type = type;
     func->statement.function.identifier = name;
@@ -260,7 +268,7 @@ ast_statement_t *ast_function(token_t **token, struct trie *functions, expr_type
 
 
     if(expect(token, LEFT_CURLY)) {
-        func->statement.function.block = ast_block(token, functions);
+        func->statement.function.block = ast_block(token);
     }
     else {
         func->statement.function.block = NULL;
@@ -268,12 +276,11 @@ ast_statement_t *ast_function(token_t **token, struct trie *functions, expr_type
 
     expect_move(token, SEMICOLON);
 
-    trie_insert(functions, name, type);
-
     return func;
 }
 
-ast_statement_t *ast_statement(token_t **token, struct trie *functions) {
+ast_statement_t *ast_statement(token_t **token) {
+    pos_t pos = (*token)->pos;
     switch((*token)->type) {
         case I8:
         case I16:
@@ -297,11 +304,16 @@ ast_statement_t *ast_statement(token_t **token, struct trie *functions) {
 
             if (expect_move(token, IDENTIFIER)) {
                 if (expect(token, ASSIGN) || expect(token, SEMICOLON)) {
-                    return ast_var_declaration(token, type, name);
+                    return ast_var_declaration(token, type, name, pos);
                 }
 
                 else if (expect(token, LEFT_PAREN)) {
-                    return ast_function(token, functions, type, name);
+                    return ast_function(token, type, name, pos);
+                }
+                else {
+                    show_error_unexpected(*token);
+                    next(token);
+                    return NULL;
                 }
             }
             break;
@@ -310,14 +322,19 @@ ast_statement_t *ast_statement(token_t **token, struct trie *functions) {
             char *name = (*token)->value;
             next(token);
             if(expect(token, ASSIGN)) {
-                return ast_var_assignment(token, name);
+                return ast_var_assignment(token, name, pos);
+            }
+            else {
+                show_error_unexpected(*token);
+                next(token);
+                return NULL;
             }
             break;
         }
 
         case RETURN: {
             next(token);
-            return ast_return(token);
+            return ast_return(token, pos);
         }
         default: {
             if((*token)->type != TOKEN_EOF) {
