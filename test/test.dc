@@ -1,5 +1,6 @@
 u8 main;
+// test lol
 int main(int c) {
-    int a = b + 1 + c;
+    int a = c + 1 * b;
     return 1;
 }

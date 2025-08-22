@@ -108,7 +108,9 @@ token_t *lexer_parse(char *src) {
                     i++;
                 }
                 else if(next == '/') {
-                    lexer_push(&list, COMMENT, "//", pos);
+                    i += 2;
+                    while (i < len && src[i] != '\n') i++;
+                    continue;
                 }
                 else {
                     lexer_push(&list, SLASH, "/", pos);

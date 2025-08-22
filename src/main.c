@@ -11,6 +11,7 @@ void print_tokens(token_t *token);
 int main(int argc, char *argv[]) {
     if(argc < 2) {
         printf("Usage: %s <file>\n", argv[0]);
+        return 1;
     }
 
     FILE *f = fopen(argv[1], "r");
@@ -33,7 +34,7 @@ int main(int argc, char *argv[]) {
     // print_tokens(token);
 
     struct statement_list *statement = ast_parse(token);
-    print_ast(statement);
+    // print_ast(statement);
 
     semantic_check(statement);
 
