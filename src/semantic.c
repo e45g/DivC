@@ -76,6 +76,7 @@ void semantic_check_statement(ast_statement_t *stmt, symbol_table_t *table) {
             if(map_get(table->current_scope, stmt->statement.function.identifier) != NULL) {
                 show_warning_redeclaration(stmt, stmt->statement.function.identifier);
             }
+
             enter_scope(table);
 
             struct arg *args = stmt->statement.function.args;
