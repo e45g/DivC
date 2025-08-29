@@ -1,6 +1,1 @@
-u8 main;
-// test lol
-int main(int c) {
-    int a = c + 1 * b;
-    return 1;
-}
+u8 hehe;

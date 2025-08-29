@@ -1,3 +1,4 @@
+#include "ir.h"
 #include "lexer.h"
 #include "parser.h"
 #include "semantic.h"
@@ -7,6 +8,7 @@
 void print_ast(struct statement_list *statements);
 void print_ast_types(struct statement_list *statements);
 void print_tokens(token_t *token);
+void print_ir(ir_instruction_list_t *list);
 
 int main(int argc, char *argv[]) {
     if(argc < 2) {
@@ -37,6 +39,9 @@ int main(int argc, char *argv[]) {
     // print_ast(statement);
 
     semantic_check(statement);
+
+    ir_instruction_list_t *ir = generate_ir(statement);
+    print_ir(ir);
 
     return 0;
 }

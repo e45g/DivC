@@ -1,5 +1,5 @@
-#ifndef __IR_H
-#define __IR_H
+#ifndef _IR_H
+#define _IR_H
 
 #include "parser.h"
 #include <stdint.h>
@@ -8,6 +8,8 @@ enum ir_opcode {
     IR_MULT,
     IR_ADD,
     IR_MINUS,
+
+    IR_ALLOC,
 };
 
 enum ir_operand_kind {
@@ -59,6 +61,17 @@ typedef struct {
     };
 } ir_instruction_t;
 
+typedef struct ir_instruction_list {
+    ir_instruction_t *instruction;
+    struct ir_instruction_list *next;
+} ir_instruction_list_t;
 
+typedef struct ir_context {
+    struct ir_instruction_list *instructions;
+    int temp_counter;
+    int label_counter;
+} ir_context_t;
+
+ir_instruction_list_t *generate_ir(struct statement_list *ast);
 
 #endif
