@@ -282,6 +282,26 @@ void print_ir_instruction(ir_instruction_t *inst) {
             printf("alloc ");
             print_operand(inst->dst);
             break;
+        case IR_STORE:
+            print_operand(inst->dst);
+            printf(" = ");
+            print_operand(inst->src1);
+            break;
+        case IR_FUNC_START:
+            printf("function %s(", inst->func.func_name);
+            for (size_t i = 0; i < inst->func.param_count; i++) {
+                if (i > 0) printf(", ");
+                print_operand(inst->func.params[i]);
+            }
+            printf(")");
+            break;
+        case IR_FUNC_END:
+            printf("end_function");
+            break;
+        case IR_RETURN:
+            printf("return ");
+            print_operand(inst->src1);
+            break;
         default:
             printf("unknown_op");
             break;
@@ -293,7 +313,7 @@ void print_ir(ir_instruction_list_t *list) {
     printf("=== IR Code ===\n");
     ir_instruction_list_t *current = list;
     size_t i = 0;
-    while(current != NULL) {
+    while(current != NULL && current->instruction != NULL) {
         printf("%3zu: ", i++);
         print_ir_instruction(current->instruction);
         current = current->next;

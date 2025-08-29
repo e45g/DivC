@@ -10,6 +10,11 @@ enum ir_opcode {
     IR_MINUS,
 
     IR_ALLOC,
+    IR_STORE,
+
+    IR_FUNC_START,
+    IR_FUNC_END,
+    IR_RETURN,
 };
 
 enum ir_operand_kind {

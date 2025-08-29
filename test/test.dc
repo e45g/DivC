@@ -1,1 +1,7 @@
-u8 hehe;
+i8 hehe(i8 b, u32 i) {
+    return 3 * 7 + 1;
+}
+
+i8 test() {
+    return 1;
+}
