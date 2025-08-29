@@ -1,3 +1,4 @@
+#include "ir.h"
 #include "parser.h"
 #include "lexer.h"
 
@@ -227,4 +228,95 @@ void print_ast_types(struct statement_list *list) {
     }
 
     printf("\n");
+}
+
+void print_operand(ir_operand_t *op) {
+    if (!op) {
+        printf("null");
+        return;
+    }
+
+    switch (op->type) {
+        case IR_OPERAND_TEMP:
+            printf("t%d", op->temp_id);
+            break;
+        case IR_OPERAND_CONST:
+            printf("%ld", op->constant.int_val);
+            break;
+        case IR_OPERAND_VAR:
+            printf("%s", op->var_name);
+            break;
+        case IR_OPERAND_LABEL:
+            printf("%s", op->label_name);
+            break;
+        case IR_OPERAND_FUNC:
+            printf("%s", op->func_name);
+            break;
+    }
+}
+
+void print_ir_instruction(ir_instruction_t *inst) {
+    switch (inst->opcode) {
+        case IR_ADD:
+            print_operand(inst->dst);
+            printf(" = ");
+            print_operand(inst->src1);
+            printf(" + ");
+            print_operand(inst->src2);
+            break;
+        case IR_MINUS:
+            print_operand(inst->dst);
+            printf(" = ");
+            print_operand(inst->src1);
+            printf(" - ");
+            print_operand(inst->src2);
+            break;
+        case IR_MULT:
+            print_operand(inst->dst);
+            printf(" = ");
+            print_operand(inst->src1);
+            printf(" * ");
+            print_operand(inst->src2);
+            break;
+        case IR_ALLOC:
+            printf("alloc ");
+            print_operand(inst->dst);
+            break;
+        case IR_STORE:
+            print_operand(inst->dst);
+            printf(" = ");
+            print_operand(inst->src1);
+            break;
+        case IR_FUNC_START:
+            printf("function %s(", inst->func.func_name);
+            for (size_t i = 0; i < inst->func.param_count; i++) {
+                if (i > 0) printf(", ");
+                print_operand(inst->func.params[i]);
+            }
+            printf(")");
+            break;
+        case IR_FUNC_END:
+            printf("end_function");
+            break;
+        case IR_RETURN:
+            printf("return ");
+            print_operand(inst->src1);
+            break;
+        default:
+            printf("unknown_op");
+            break;
+    }
+    printf("\n");
+}
+
+void print_ir(ir_instruction_list_t *list) {
+    printf("=== IR Code ===\n");
+    ir_instruction_list_t *current = list;
+    size_t i = 0;
+    while(current != NULL && current->instruction != NULL) {
+        printf("%3zu: ", i++);
+        print_ir_instruction(current->instruction);
+        current = current->next;
+    };
+    printf("===============\n");
 }
