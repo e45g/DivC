@@ -26,13 +26,13 @@ enum ir_operand_kind {
 };
 
 typedef struct {
-    enum ir_operand_kind type;
+    enum ir_operand_kind kind;
+    expr_type_t type;
     union {
         int temp_id; // e.g. t1, t2
         char *var_name;
 
         struct {
-            expr_type_t type;
             union {
                 int64_t int_val;
                 double float_val;
@@ -47,6 +47,7 @@ typedef struct {
 
 typedef struct {
     enum ir_opcode opcode;
+    expr_type_t result_type;
     ir_operand_t *dst;
     ir_operand_t *src1;
     ir_operand_t *src2;
@@ -61,6 +62,7 @@ typedef struct {
             char *func_name;
             ir_operand_t **params;
             size_t param_count;
+            size_t stack_size;
             expr_type_t return_type;
         } func;
     };

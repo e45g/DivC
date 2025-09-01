@@ -269,6 +269,10 @@ ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name, pos
 
     if(expect(token, LEFT_CURLY)) {
         func->statement.function.block = ast_block(token);
+        if(func->statement.function.block != NULL) {
+            // TODO: figure stack size properly (var after return counted);
+            func->statement.function.stack_size = func->statement.function.block->stack_size;
+        }
     }
     else {
         func->statement.function.block = NULL;
@@ -442,8 +446,6 @@ expr_type_t ast_type(token_t **token) {
 }
 
 int get_type_size(expr_type_t type) {
-    // TODO: check for pointer
-
     switch(type) {
         case INT8: return 1;
         case INT16: return 2;

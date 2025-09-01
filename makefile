@@ -8,5 +8,8 @@ all: $(TARGET)
 $(TARGET): $(SRCS)
 	@$(CC) $(CFLAGS) -o $@ $^
 
+test: $(TARGET)
+	./$(TARGET) test/test.dc
+
 clean:
 	rm $(TARGET)

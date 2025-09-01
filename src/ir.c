@@ -7,24 +7,26 @@
 #include "lexer.h"
 #include "parser.h"
 
-ir_operand_t *create_const_operand(int64_t value) {
+ir_operand_t *create_const_operand(int64_t value, expr_type_t type) {
     ir_operand_t *op = malloc(sizeof(ir_operand_t));
-    op->type = IR_OPERAND_CONST;
+    op->kind = IR_OPERAND_CONST;
+    op->type = type;
     op->constant.int_val = value;
-    op->constant.type = INT32; // default to 32 cuz why not
     return op;
 }
 
-ir_operand_t *create_var_operand(char *name) {
+ir_operand_t *create_var_operand(char *name, expr_type_t type) {
     ir_operand_t *op = malloc(sizeof(ir_operand_t));
-    op->type = IR_OPERAND_VAR;
+    op->kind = IR_OPERAND_VAR;
+    op->type = type;
     op->var_name = strdup(name);
     return op;
 }
 
-ir_operand_t *create_tmp_operand(int id) {
+ir_operand_t *create_tmp_operand(int id, expr_type_t type) {
     ir_operand_t *op = malloc(sizeof(ir_operand_t));
-    op->type = IR_OPERAND_TEMP;
+    op->kind = IR_OPERAND_TEMP;
+    op->type = type;
     op->temp_id = id;
     return op;
 }
@@ -50,11 +52,11 @@ ir_operand_t *generate_expr_ir(ast_node_t *expr, ir_context_t *ctx) {
 
     switch(expr->type) {
         case AST_NUMBER: {
-            return create_const_operand(expr->expr.integer);
+            return create_const_operand(expr->expr.integer, expr->resolved_type);
         }
 
         case AST_IDENTIFIER: {
-            return create_var_operand(expr->expr.identifier);
+            return create_var_operand(expr->expr.identifier, expr->resolved_type);
         }
 
         case AST_BINARY_OP: {
@@ -62,12 +64,13 @@ ir_operand_t *generate_expr_ir(ast_node_t *expr, ir_context_t *ctx) {
             ir_operand_t *right = generate_expr_ir(expr->expr.binary_op.right, ctx);
 
             int temp_id = new_temp(ctx);
-            ir_operand_t *res = create_tmp_operand(temp_id);
+            ir_operand_t *res = create_tmp_operand(temp_id, expr->resolved_type);
 
             ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
             inst->dst = res;
             inst->src1 = left;
             inst->src2 = right;
+            inst->result_type = expr->resolved_type;
 
             switch(expr->expr.binary_op.op) {
                 case PLUS:
@@ -113,7 +116,8 @@ void generate_statement_ir(ast_statement_t *stmt, ir_context_t *ctx) {
         case AST_VAR_DECLARATION: {
             ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
             inst->opcode = IR_ALLOC;
-            inst->dst = create_var_operand(stmt->statement.declaration.identifier);
+            inst->result_type = stmt->statement.declaration.t;
+            inst->dst = create_var_operand(stmt->statement.declaration.identifier, stmt->statement.declaration.t);
             emit_instruction(ctx, inst);
 
             if(stmt->statement.declaration.initializer) {
@@ -127,7 +131,8 @@ void generate_statement_ir(ast_statement_t *stmt, ir_context_t *ctx) {
             ir_operand_t *value = generate_expr_ir(stmt->statement.assignment.value, ctx);
             ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
             inst->opcode = IR_STORE;
-            inst->dst = create_var_operand(stmt->statement.assignment.identifier);
+            inst->result_type = stmt->statement.assignment.resolved_var_type;
+            inst->dst = create_var_operand(stmt->statement.assignment.identifier, stmt->statement.assignment.resolved_var_type);
             inst->src1 = value;
             emit_instruction(ctx, inst);
 
@@ -140,6 +145,7 @@ void generate_statement_ir(ast_statement_t *stmt, ir_context_t *ctx) {
 
             ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
             inst->opcode = IR_RETURN;
+            inst->result_type = val ? val->type : VOID_T;
             inst->src1 = val;
 
             emit_instruction(ctx, inst);
@@ -149,14 +155,19 @@ void generate_statement_ir(ast_statement_t *stmt, ir_context_t *ctx) {
         case AST_FUNC_DECLARATION: {
             ir_instruction_t *inst_start = calloc(1, sizeof(ir_instruction_t));
             inst_start->opcode = IR_FUNC_START;
+            inst_start->result_type = stmt->statement.function.type;
             inst_start->func.func_name = strdup(stmt->statement.function.identifier);
             inst_start->func.param_count = stmt->statement.function.arg_count;
             inst_start->func.return_type = stmt->statement.function.type;
+            inst_start->func.stack_size = stmt->statement.function.stack_size;
 
             if (stmt->statement.function.arg_count > 0) {
                 inst_start->func.params = malloc(sizeof(ir_operand_t*) * stmt->statement.function.arg_count);
                 for (size_t i = 0; i < stmt->statement.function.arg_count; i++) {
-                    inst_start->func.params[i] = create_var_operand(stmt->statement.function.args[i].identifier);
+                    inst_start->func.params[i] = create_var_operand(
+                        stmt->statement.function.args[i].identifier,
+                        stmt->statement.function.args[i].type
+                    );
                 }
             }
 
@@ -165,6 +176,7 @@ void generate_statement_ir(ast_statement_t *stmt, ir_context_t *ctx) {
 
             ir_instruction_t *inst_end = calloc(1, sizeof(ir_instruction_t));
             inst_end->opcode = IR_FUNC_END;
+            inst_end->result_type = VOID_T;
             emit_instruction(ctx, inst_end);
 
             break;

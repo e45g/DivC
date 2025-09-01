@@ -55,6 +55,7 @@ struct block_member;
 typedef struct ast_node {
     enum ast_expr_type type;
     pos_t pos;
+    expr_type_t resolved_type;
     union ast_expr {
         int64_t integer;
         char *identifier;
@@ -85,6 +86,7 @@ typedef struct ast_statement {
         struct {
             char *identifier;
             ast_node_t *value;
+            expr_type_t resolved_var_type;
         } assignment;
 
         struct {
@@ -96,6 +98,7 @@ typedef struct ast_statement {
             char *identifier;
             struct arg *args;
             size_t arg_count;
+            size_t stack_size;
             struct block_member *block;
         } function;
 

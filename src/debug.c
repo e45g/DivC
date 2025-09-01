@@ -31,27 +31,7 @@ const char* expr_type_to_string(expr_type_t type) {
         case F64: return "float64";
         case VOID_T: return "void";
         case STRUC: return "struct";
-        default: {
-            if(type & TYPE_POINTER) {
-                type = type & ~TYPE_POINTER;
-                switch(type) {
-                    case INT8: return "int8*";
-                    case INT16: return "int16*";
-                    case INT32: return "int32*";
-                    case INT64: return "int64*";
-                    case UINT8: return "uint8*";
-                    case UINT16: return "uint16*";
-                    case UINT32: return "uint32*";
-                    case UINT64: return "uint64*";
-                    case F32: return "float32*";
-                    case F64: return "float64*";
-                    case VOID_T: return "void*";
-                    case STRUC: return "struct*";
-                    default: return "unknown1*";
-                }
-            }
-            return "unknown2";
-        }
+        default: return "unknown2";
     }
 }
 
@@ -236,7 +216,7 @@ void print_operand(ir_operand_t *op) {
         return;
     }
 
-    switch (op->type) {
+    switch (op->kind) {
         case IR_OPERAND_TEMP:
             printf("t%d", op->temp_id);
             break;
@@ -253,9 +233,11 @@ void print_operand(ir_operand_t *op) {
             printf("%s", op->func_name);
             break;
     }
+    printf("(%s)", expr_type_to_string(op->type));
 }
 
 void print_ir_instruction(ir_instruction_t *inst) {
+    printf("[%s] ", expr_type_to_string(inst->result_type));
     switch (inst->opcode) {
         case IR_ADD:
             print_operand(inst->dst);
@@ -293,7 +275,7 @@ void print_ir_instruction(ir_instruction_t *inst) {
                 if (i > 0) printf(", ");
                 print_operand(inst->func.params[i]);
             }
-            printf(")");
+            printf(") #%ld", inst->func.stack_size);
             break;
         case IR_FUNC_END:
             printf("end_function");
