@@ -1,4 +1,4 @@
-u64 main(u16 b, u64 c) {
-    u8 a = 1;
-    int hehe = a + 1;
+int _start() {
+    i32 hehe = 264*264;
+    return hehe;
 }

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     semantic_check(statement);
 
     ir_instruction_list_t *ir = generate_ir(statement);
-    print_ir(ir);
+    // print_ir(ir);
 
     FILE *output_f = fopen("out.s", "w");
     generate_x64_code(ir, output_f);

@@ -32,13 +32,14 @@ typedef struct var_location {
 
 typedef struct tmp_location {
     int offset; // RBP
+    int size;
     int temp_id;
     struct tmp_location *next;
 } tmp_location_t;
 
 typedef struct codegen_context {
     tmp_location_t *temps;
-    var_location_t *local;
+    var_location_t *locals;
     var_location_t *params;
     int stack_offset;
     int max_offset;
