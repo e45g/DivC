@@ -36,7 +36,7 @@ int new_temp(ir_context_t *ctx) {
 }
 
 char *new_label(ir_context_t *ctx) {
-    char *label = malloc(32); // TODO: this is obv enough, but magic numbers aren't good
+    char *label = malloc(32); // TODO: uhh, i hope this is enough :)
     snprintf(label, 32, "L%d", ctx->label_counter++);
     return label;
 }
@@ -53,6 +53,27 @@ ir_operand_t *generate_expr_ir(ast_node_t *expr, ir_context_t *ctx) {
     switch(expr->type) {
         case AST_NUMBER: {
             return create_const_operand(expr->expr.integer, expr->resolved_type);
+        }
+
+        case AST_FUNCTION_CALL: {
+            ir_instruction_t *inst = calloc(1, sizeof(ir_instruction_t));
+            ir_operand_t *dst = create_tmp_operand(new_temp(ctx), INT32); // support types :)
+            ir_operand_t *res = create_tmp_operand(new_temp(ctx), INT32); // support types :)
+            res->func_name = expr->expr.identifier;
+
+            inst->opcode = IR_CALL;
+            inst->dst = dst;
+            inst->src1 = res;
+            inst->result_type = INT32; // TODO: get this (add in semantics)
+            inst->call.arg_count = expr->expr.call.arg_count;
+            inst->call.args = malloc(sizeof(ir_operand_t*) * inst->call.arg_count);
+            for(size_t i = 0; i < inst->call.arg_count; i++) {
+                    inst->call.args[i] = generate_expr_ir(expr->expr.call.args[i], ctx);
+            }
+            emit_instruction(ctx, inst);
+
+            return dst;
+            break;
         }
 
         case AST_IDENTIFIER: {

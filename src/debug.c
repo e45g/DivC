@@ -62,6 +62,16 @@ void print_ast_node(ast_node_t *node, int depth) {
             print_ast_node(node->expr.binary_op.right, depth + 2);
             break;
 
+        case AST_FUNCTION_CALL:
+            printf("FUNCTION CALL: %s\n", node->expr.call.identifier ? node->expr.call.identifier : "(null)");
+            for (int i = 0; i < depth + 1; i++) printf("  ");
+            printf("+- ARGUMENTS (%zu):\n", node->expr.call.arg_count);
+            for (size_t i = 0; i < node->expr.call.arg_count; i++) {
+                print_ast_node(node->expr.call.args[i], depth + 2);
+            }
+            break;
+
+
         case AST_IDENTIFIER:
             printf("IDENTIFIER: %s\n", node->expr.identifier ? node->expr.identifier : "(null)");
             break;
@@ -284,6 +294,16 @@ void print_ir_instruction(ir_instruction_t *inst) {
             printf("return ");
             print_operand(inst->src1);
             break;
+        case IR_CALL:
+            print_operand(inst->dst);
+            printf(" = call %s(", inst->src1->func_name);
+            for (size_t i = 0; i < inst->call.arg_count; i++) {
+                if (i > 0) printf(", ");
+                print_operand(inst->call.args[i]);
+            }
+            printf(")");
+            break;
+
         default:
             printf("unknown_op");
             break;

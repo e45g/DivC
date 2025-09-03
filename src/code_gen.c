@@ -6,7 +6,7 @@
 #include "ir.h"
 #include "parser.h"
 
-#define debug 1
+#define debug 0
 
 // Using NASM
 
@@ -261,6 +261,18 @@ void generate_instruction(ir_instruction_t *instruction, codegen_context_t *ctx)
         case IR_STORE: {
             if(debug) fprintf(ctx->output, "\n    ; IR_STORE\n");
             generate_operand_load(ctx, instruction->src1, REG_RAX, get_type_size(instruction->dst->type));
+            generate_operand_store(ctx, instruction->dst);
+            break;
+        }
+
+        case IR_CALL: {
+            if(debug) fprintf(ctx->output, "\n    ; IR_CALL\n");
+            for(size_t i = 0; i < instruction->call.arg_count && i < 6; i++) {
+                int size = get_type_size(instruction->call.args[i]->type);
+                x64_registers_t call_regs[] = {REG_RDI, REG_RSI, REG_RDX, REG_RCX, REG_R8, REG_R9};
+                generate_operand_load(ctx, instruction->call.args[i], call_regs[i], size);
+            }
+            fprintf(ctx->output, "    call %s\n", instruction->src1->func_name);
             generate_operand_store(ctx, instruction->dst);
             break;
         }

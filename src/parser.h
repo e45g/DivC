@@ -21,6 +21,7 @@ enum ast_expr_type {
 enum ast_stmt_type {
     AST_VAR_DECLARATION,
     AST_VAR_ASSIGNMENT,
+    AST_FUNC_CALL,
     AST_FUNC_DECLARATION,
     AST_RETURN_STMT,
     AST_EXPRESSION_STMT,
@@ -70,6 +71,12 @@ typedef struct ast_node {
             struct ast_node *left;
             struct ast_node *right;
         } binary_op;
+
+        struct {
+            char *identifier;
+            size_t arg_count;
+            struct ast_node **args;
+        } call;
     } expr;
 } ast_node_t;
 
@@ -90,6 +97,7 @@ typedef struct ast_statement {
         } assignment;
 
         struct {
+            // TODO : add type (from func)
             ast_node_t *value;
         } ret;
 

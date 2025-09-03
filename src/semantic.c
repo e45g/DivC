@@ -61,6 +61,15 @@ void semantic_check_node(ast_node_t *node, symbol_table_t *table) {
             node->resolved_type = sym->type;
             break;
         }
+
+        case AST_FUNCTION_CALL: {
+            for(size_t i = 0; i < node->expr.call.arg_count; i++) {
+                semantic_check_node(node->expr.call.args[i], table);
+            }
+            // TODO: add return type
+            break;
+        }
+
         default: {
             node->resolved_type = UNKNOWN_TYPE;
             break;

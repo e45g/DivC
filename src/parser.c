@@ -64,9 +64,27 @@ ast_node_t *factor(token_t **token) {
         case IDENTIFIER: {
             ast_node_t *node = malloc(sizeof(ast_node_t));
             node->pos = (*token)->pos;
-            node->type = AST_IDENTIFIER;
-            node->expr.identifier = (*token)->value;
+            char *id = (*token)->value;
             next(token);
+            if(expect_move(token, LEFT_PAREN)) {
+                node->type = AST_FUNCTION_CALL;
+                node->expr.call.identifier = id;
+
+                size_t arg_c = 0;
+                ast_node_t **args = NULL;
+                do {
+                    args = realloc(args, sizeof(ast_node_t*) * (arg_c+1));
+                    args[arg_c] = expression(token);
+                    arg_c++;
+                } while(expect_move(token, COMMA));
+                node->expr.call.arg_count = arg_c;
+                node->expr.call.args = args;
+                expect_move(token, RIGHT_PAREN);
+            }
+            else {
+                node->type = AST_IDENTIFIER;
+                node->expr.identifier = id;
+            }
             return node;
         }
         case LEFT_PAREN: {
@@ -228,7 +246,6 @@ ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name, pos
     ast_statement_t *func = malloc(sizeof(ast_statement_t));
 
     func->pos = pos;
-    func->type = AST_FUNC_DECLARATION;
     func->statement.function.type = type;
     func->statement.function.identifier = name;
 
@@ -268,6 +285,7 @@ ast_statement_t *ast_function(token_t **token, expr_type_t type, char *name, pos
 
 
     if(expect(token, LEFT_CURLY)) {
+        func->type = AST_FUNC_DECLARATION;
         func->statement.function.block = ast_block(token);
         if(func->statement.function.block != NULL) {
             // TODO: figure stack size properly (var after return counted);
