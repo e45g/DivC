@@ -28,8 +28,8 @@ To use the compiler, you need to provide a source file as a command-line argumen
 ### Roadmap
  - [x] Support functions
  - [x] Semantic analysis (basic)
- - [ ] IR
- - [ ] Code generation
+ - [x] IR
+ - [x] Basic Code generation
  - [ ] Support more features
  - [ ] Semantic analysis (advanced)
  - [ ] More features :)
